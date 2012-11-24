@@ -1,0 +1,15 @@
+{
+	"auto_upgrade_last_run": 1353012263,
+	"installed_packages":
+	[
+		"BracketHighlighter",
+		"DetectSyntax",
+		"Emmet",
+		"Git",
+		"HexViewer",
+		"Package Control",
+		"SideBarGit",
+		"SublimeCodeIntel",
+		"WordCount"
+	]
+}
