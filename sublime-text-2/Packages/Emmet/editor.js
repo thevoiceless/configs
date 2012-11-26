@@ -87,27 +87,29 @@ var editorProxy = emmet.exec(function(require, _) {
 
 		getProfileName: function() {
 			var view = activeView();
-
-			var profile = view.settings()['emmet.profile'] || null;
-			if (profile)
-				return profile;
-
 			var pos = this.getCaretPos();
 
-			if (view.match_selector(pos, 'text.xml') || view.match_selector(pos, 'xsl'))
-				return 'xml';
+			if (view.match_selector(pos, 'text.html') 
+				&& sublimeGetOption('autodetect_xhtml', false)
+				&& require('actionUtils').isXHTML(this)) {
+				return 'xhtml';
+			}
 
-			if (view.match_selector(pos, 'source')) {
+			if (view.match_selector(pos, 'string.quoted.double.block.python')
+				|| view.match_selector(pos, 'source.coffee string')
+				|| view.match_selector(pos, 'string.unquoted.heredoc')) {
+				// use html's default profile for:
+				// * Python's multiline block
+				// * CoffeeScript string
+				// * PHP heredoc
+				return null;
+			}
+
+			if (view.score_selector(pos, 'source string')) {
 				return 'line';
 			}
 
-			if (view.match_selector(pos, 'text.html')) {
-				if (~view.substr(new sublime.Region(0, 200)).toLowerCase().indexOf('xhtml')) {
-					return 'xhtml';
-				}
-			}
-			
-			return 'html';
+			return null;
 		},
 
 		prompt: function(title) {
@@ -174,8 +176,10 @@ function pyPreprocessText(value) {
 
 	value = ts.processText(value, tabstopOptions);
 
-	if (lastZero) {
-		value = require('utils').replaceSubstring(value, '$0', lastZero);
+	if (sublimeGetOption('insert_final_tabstop', false) && !/\$\{0\}$/.test(value)) {
+		value += '${0}';
+	} else if (lastZero) {
+		value = require('utils').replaceSubstring(value, '${0}', lastZero);
 	}
 	
 	return value;

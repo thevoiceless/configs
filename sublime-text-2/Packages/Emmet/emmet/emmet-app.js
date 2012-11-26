@@ -1218,7 +1218,7 @@ var emmet = (function(global) {
 			if (!abbr) return '';
 			
 			syntax = syntax || defaultSyntax;
-			profile = profile || defaultProfile;
+//			profile = profile || defaultProfile;
 			
 			var filters = r('filters');
 			var parser = r('abbreviationParser');
@@ -1231,10 +1231,10 @@ var emmet = (function(global) {
 				syntax: syntax, 
 				contextNode: contextNode
 			});
+			
 			var filtersList = filters.composeList(syntax, profile, data[1]);
 			filters.apply(outputTree, filtersList, profile);
 			return outputTree.toString();
-//			return this.require('utils').replaceVariables(outputTree.toString());
 		},
 		
 		/**
@@ -2439,7 +2439,7 @@ emmet.exec(function(require, _) {
 			}
 			
 			item.data('paste', null);
-			return !_.isUndefined(pastedContentObj);
+			return !!pastedContentObj;
 		});
 		
 		if (!targets.length && options.pastedContent) {
@@ -4909,7 +4909,7 @@ emmet.define('profile', function(require, _) {
 		 * @returns {Object}
 		 */
 		get: function(name, syntax) {
-			if (syntax && _.isString(name)) {
+			if (!name && syntax) {
 				// search in user resources first
 				var profile = require('resources').findItem(syntax, 'profile');
 				if (profile) {
@@ -4917,14 +4917,17 @@ emmet.define('profile', function(require, _) {
 				}
 			}
 			
-			if (!name)
+			if (!name) {
 				return profiles.plain;
+			}
 			
-			if (name instanceof OutputProfile)
+			if (name instanceof OutputProfile) {
 				return name;
+			}
 			
-			if (_.isString(name) && name.toLowerCase() in profiles)
+			if (_.isString(name) && name.toLowerCase() in profiles) {
 				return profiles[name.toLowerCase()];
+			}
 			
 			return this.create(name);
 		},
@@ -4999,10 +5002,15 @@ emmet.define('editorUtils', function(require, _) {
 		 * @param {String} profile
 		 */
 		outputInfo: function(editor, syntax, profile) {
+			// most of this code makes sense for Java/Rhino environment
+			// because string that comes from Java are not actually JS string
+			// but Java String object so the have to be explicitly converted
+			// to native string
+			profile = profile || editor.getProfileName();
 			return  {
 				/** @memberOf outputInfo */
 				syntax: String(syntax || editor.getSyntax()),
-				profile: String(profile || editor.getProfileName()),
+				profile: profile ? String(profile) : null,
 				content: String(editor.getContent())
 			};
 		},
@@ -5250,6 +5258,79 @@ emmet.define('actionUtils', function(require, _) {
 			}
 			
 			return false;
+		},
+		
+		/**
+		 * Common syntax detection method for editors that doesn’t provide any
+		 * info about current syntax scope. 
+		 * @param {IEmmetEditor} editor Current editor
+		 * @param {String} hint Any syntax hint that editor can provide 
+		 * for syntax detection. Default is 'html'
+		 * @returns {String} 
+		 */
+		detectSyntax: function(editor, hint) {
+			var caretPos = editor.getCaretPos();
+			var syntax = hint || 'html';
+			
+			if (!require('resources').hasSyntax(syntax))
+				syntax = 'html';
+			
+			if (syntax == 'html') {
+				// are we inside <style> tag?
+				var pair = require('html_matcher').getTags(editor.getContent(), caretPos);
+				if (pair && pair[0] && pair[0].type == 'tag' && pair[0].name.toLowerCase() == 'style') {
+					// check that we're actually inside the tag
+					if (pair[0].end <= caretPos && pair[1].start >= caretPos)
+						syntax = 'css';
+				}
+			}
+			
+            if (syntax == 'html') {
+            	// are we inside style attribute?
+                var tree = require('xmlEditTree').parseFromPosition(editor.getContent(), caretPos, true);
+                if (tree) {
+                    var attr = tree.itemFromPosition(caretPos, true);
+                    if (attr && attr.name().toLowerCase() == 'style') {
+                        var range = attr.valueRange(true);
+                        if (range.start <= caretPos && range.end >= caretPos)
+                            syntax = 'css';
+                    }
+                }
+            }
+			
+			return syntax;
+		},
+		
+		/**
+		 * Common method for detecting output profile
+		 * @param {IEmmetEditor} editor
+		 * @returns {String}
+		 */
+		detectProfile: function(editor) {
+			switch(editor.getSyntax()) {
+				 case 'xml':
+				 case 'xsl':
+				 	return 'xml';
+				 case 'html':
+				 	var profile = require('resources').getVariable('profile');
+				 	if (!profile) { // no forced profile, guess from content
+					 	// html or xhtml?
+				 		profile = this.isXHTML(editor) ? 'xhtml': 'html';
+				 	}
+
+				 	return profile;
+			}
+
+			return 'xhtml';
+		},
+		
+		/**
+		 * Tries to detect if current document is XHTML one.
+		 * @param {IEmmetEditor} editor
+		 * @returns {Boolean}
+		 */
+		isXHTML: function(editor) {
+			return editor.getContent().search(/<!DOCTYPE[^>]+XHTML/i) != -1;
 		}
 	};
 });/**
@@ -7920,7 +8001,7 @@ emmet.define('wrapWithAbbreviation', function(require, _) {
 			var utils = require('utils');
 			
 			syntax = syntax || emmet.defaultSyntax();
-			profile = profile || emmet.defaultProfile();
+			profile = require('profile').get(profile, syntax);
 			
 			require('tabStops').resetTabstopIndex();
 			
@@ -9656,10 +9737,21 @@ emmet.define('cssResolver', function(require, _) {
 		},
 		
 		/**
-		 * @type {Array} List of unprefixed CSS properties that supported by 
-		 * current prefix. This list is used to generate all-prefixed property 
+		 * List of unprefixed CSS properties that supported by 
+		 * current prefix. This list is used to generate all-prefixed property
+		 * @returns {Array} 
 		 */
-		supports: null
+		properties: function() {
+			return getProperties('css.' + this.prefix + 'Properties') || [];
+		},
+		
+		/**
+		 * Check if given property is supported by current prefix
+		 * @param name
+		 */
+		supports: function(name) {
+			return _.include(this.properties(), name);
+		}
 	};
 	
 	
@@ -9705,7 +9797,7 @@ emmet.define('cssResolver', function(require, _) {
 		+ 'abbreviations. Empty list means that all possible CSS values may ' 
 		+ 'have <code><%= vendor %></code> prefix.');
 	
-	var descAddonTemplate = _.template('A comma-separated list of <em>additions</em> CSS properties ' 
+	var descAddonTemplate = _.template('A comma-separated list of <em>additional</em> CSS properties ' 
 			+ 'for <code>css.<%= vendor %>Preperties</code> preference. ' 
 			+ 'You should use this list if you want to add or remove a few CSS ' 
 			+ 'properties to original set. To add a new property, simply write its name, '
@@ -9735,13 +9827,22 @@ emmet.define('cssResolver', function(require, _) {
 	prefs.define('css.keywords', 'auto, inherit', 
 			'A comma-separated list of valid keywords that can be used in CSS abbreviations.');
 	
-	prefs.define('css.keywordAliases', 'a:auto, i:inherit', 
+	prefs.define('css.keywordAliases', 'a:auto, i:inherit, s:solid, da:dashed, do:dotted', 
 			'A comma-separated list of keyword aliases, used in CSS abbreviation. '
 			+ 'Each alias should be defined as <code>alias:keyword_name</code>.');
 	
 	prefs.define('css.unitAliases', 'e:em, p:%, x:ex, r:rem', 
 			'A comma-separated list of unit aliases, used in CSS abbreviation. '
 			+ 'Each alias should be defined as <code>alias:unit_value</code>.');
+	
+	prefs.define('css.color.short', true, 
+			'Should color values like <code>#ffffff</code> be shortened to '
+			+ '<code>#fff</code> after abbreviation with color was expanded.');
+	
+	prefs.define('css.color.case', 'keep', 
+			'Letter case of color values generated by abbreviations with color '
+			+ '(like <code>c#0</code>). Possible values are <code>upper</code>, '
+			+ '<code>lower</code> and <code>keep</code>.');
 	
 	
 	function isNumeric(ch) {
@@ -9776,6 +9877,68 @@ emmet.define('cssResolver', function(require, _) {
 		});
 		
 		return snippet.split(':').length == 2;
+	}
+	
+	/**
+	 * Normalizes abbreviated value to final CSS one
+	 * @param {String} value
+	 * @returns {String}
+	 */
+	function normalizeValue(value) {
+		if (value.charAt(0) == '-' && !/^\-[\.\d]/) {
+			value = value.replace(/^\-+/, '');
+		}
+		
+		if (value.charAt(0) == '#') {
+			return normalizeHexColor(value);
+		}
+		
+		return getKeyword(value);
+	}
+	
+	function normalizeHexColor(value) {
+		var hex = value.replace(/^#+/, '');
+		var repeat = require('utils').repeatString;
+		var color = null;
+		switch (hex.length) {
+			case 1:
+				color = repeat(hex, 6);
+				break;
+			case 2:
+				color = repeat(hex, 3);
+				break;
+			case 3:
+				color = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+				break;
+			case 4:
+				color = hex + hex.substr(0, 2);
+				break;
+			case 5:
+				color = hex + hex.charAt(0);
+				break;
+			default:
+				color = hex.substr(0, 6);
+		}
+		
+		// color must be shortened?
+		if (prefs.get('css.color.short')) {
+			var p = color.split('');
+			if (p[0] == p[1] && p[2] == p[3] && p[4] == p[5]) {
+				color = p[0] + p[2] + p[4];
+			}
+		}
+		
+		// should transform case?
+		switch (prefs.get('css.color.case')) {
+			case 'upper':
+				color = color.toUpperCase();
+				break;
+			case 'lower':
+				color = color.toLowerCase();
+				break;
+		}
+		
+		return '#' + color;
 	}
 	
 	function getKeyword(name) {
@@ -9829,7 +9992,7 @@ emmet.define('cssResolver', function(require, _) {
 				return data.prefix == prefix;
 			});
 		
-		return info && info.supports && _.include(info.supports, property);
+		return info && info.supports(property);
 	}
 	
 	/**
@@ -9912,14 +10075,6 @@ emmet.define('cssResolver', function(require, _) {
 		}
 		
 		return formatProperty(snippet, syntax);
-		
-		// format value separator
-		var ix = snippet.indexOf(':');
-		snippet = snippet.substring(0, ix).replace(/\s+$/, '') 
-			+ prefs.get('css.valueSeparator')
-			+ require('utils').trim(snippet.substring(ix + 1));
-		
-		return snippet;
 	}
 	
 	/**
@@ -9949,20 +10104,16 @@ emmet.define('cssResolver', function(require, _) {
 	}
 	
 	addPrefix('w', {
-		prefix: 'webkit',
-		supports: getProperties('css.webkitProperties')
+		prefix: 'webkit'
 	});
 	addPrefix('m', {
-		prefix: 'moz',
-		supports: getProperties('css.mozProperties')
+		prefix: 'moz'
 	});
 	addPrefix('s', {
-		prefix: 'ms',
-		supports: getProperties('css.msProperties')
+		prefix: 'ms'
 	});
 	addPrefix('o', {
-		prefix: 'o',
-		supports: getProperties('css.oProperties')
+		prefix: 'o'
 	});
 	
 	// I think nobody uses it
@@ -10142,7 +10293,7 @@ emmet.define('cssResolver', function(require, _) {
 			var i = 0, il = abbr.length, value = '', ch;
 			while (i < il) {
 				ch = abbr.charAt(i);
-				if (isNumeric(ch) || (ch == '-' && isNumeric(abbr.charAt(i + 1)))) {
+				if (isNumeric(ch) || ch == '#' || (ch == '-' && isNumeric(abbr.charAt(i + 1)))) {
 					value = abbr.substring(i);
 					break;
 				}
@@ -10169,45 +10320,34 @@ emmet.define('cssResolver', function(require, _) {
 			return keywords.join('-') + value;
 		},
 		
-		/**
-		 * Parses values defined in abbreviations
-		 * @param {String} abbrValues Values part of abbreviations (can be 
-		 * extracted with <code>findValuesInAbbreviation</code>)
-		 * @returns {Array}
-		 */
-		parseValues: function(abbrValues) {
-			var valueStack = '';
+		parseValues: function(str) {
+			/** @type StringStream */
+			var stream = require('stringStream').create(str);
 			var values = [];
-			var i = 0, il = abbrValues.length, ch, nextCh;
+			var ch = null;
 			
-			while (i < il) {
-				ch = abbrValues.charAt(i);
-				if (ch == '-' && valueStack) {
-					// next value found
-					values.push(valueStack);
-					valueStack = '';
-					i++;
-					continue;
-				}
-				
-				valueStack += ch;
-				i++;
-				
-				nextCh = abbrValues.charAt(i);
-				if (ch != '-' && !isNumeric(ch) && (isNumeric(nextCh) || nextCh == '-')) {
-					if (isValidKeyword(valueStack)) {
-						i++;
+			while (ch = stream.next()) {
+				if (ch == '#') {
+					stream.match(/^[0-9a-f]+/, true);
+					values.push(stream.current());
+				} else if (ch == '-') {
+					if (isValidKeyword(_.last(values)) || 
+							( stream.start && isNumeric(str.charAt(stream.start - 1)) )
+						) {
+						stream.start = stream.pos;
 					}
-					values.push(valueStack);
-					valueStack = '';
+					
+					stream.match(/^\-?[0-9]*(\.[0-9]+)?[a-z\.]*/, true);
+					values.push(stream.current());
+				} else {
+					stream.match(/^[0-9]*(\.[0-9]+)?[a-z]*/, true);
+					values.push(stream.current());
 				}
+				
+				stream.start = stream.pos;
 			}
 			
-			if (valueStack) {
-				values.push(valueStack);
-			}
-			
-			return _.map(values, getKeyword);
+			return _.map(_.compact(values), normalizeValue);
 		},
 		
 		/**
@@ -12282,8 +12422,9 @@ emmet.define('bootstrap', function(require, _) {
 				this.loadProfiles(data.profiles);
 			}
 			
-			if (data.syntaxprofiles) {
-				this.loadSyntaxProfiles(data.syntaxprofiles);
+			var profiles = data.syntaxProfiles || data.syntaxprofiles;
+			if (profiles) {
+				this.loadSyntaxProfiles(profiles);
 			}
 		},
 		

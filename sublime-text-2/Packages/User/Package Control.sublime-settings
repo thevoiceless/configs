@@ -1,7 +1,8 @@
 {
-	"auto_upgrade_last_run": 1353012263,
+	"auto_upgrade_last_run": null,
 	"installed_packages":
 	[
+		"Bison",
 		"BracketHighlighter",
 		"DetectSyntax",
 		"Emmet",
