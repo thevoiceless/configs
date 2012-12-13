@@ -9,10 +9,10 @@ class Pref:
 	def load(self):
 		Pref.view                   = False
 		Pref.modified               = False
-		Pref.wrdRx                  = re.compile("\w{1,}", re.U)
-		Pref.wrdRx				          = Pref.wrdRx.match
 		Pref.elapsed_time           = 0.4
 		Pref.running                = False
+		Pref.wrdRx                  = re.compile("\w{1,}", re.U)
+		Pref.wrdRx                  = Pref.wrdRx.match
 		Pref.enable_live_count      = s.get('enable_live_count', True)
 		Pref.enable_readtime        = s.get('enable_readtime', False)
 		Pref.enable_line_word_count = s.get('enable_line_word_count', False)
@@ -79,7 +79,7 @@ class WordCount(sublime_plugin.EventListener):
 			else:
 				self.guess_view()
 
-	def display(self, view, word_count, word_count_line, char_count_line, on_selection):
+	def display(self, view, word_count, char_count, word_count_line, char_count_line):
 		m = int(word_count / Pref.readtime_wpm)
 		s = int(word_count % Pref.readtime_wpm / (Pref.readtime_wpm / 60))
 
@@ -100,19 +100,10 @@ class WordCount(sublime_plugin.EventListener):
 			read_time = " ~%dm, %ds reading time" % (m, s)
 		else:
 			read_time = ""
+		view.set_status('WordCount', "%s/%s%s%s%s" % (self.makePlural('Word', word_count), self.makePlural('Char', char_count), word_count_line, chars_count_line, read_time))
 
-		if word_count == 0:
-			view.set_status('No words')
-		elif on_selection:
-			if word_count == 1:
-				view.set_status('WordCount', "1 Word selected")
-			else:
-				view.set_status('WordCount', "%s Words selected%s%s%s" % (word_count, word_count_line, chars_count_line, read_time))
-		else:
-			if word_count == 1:
-				view.set_status('WordCount', "1 Word")
-			else:
-				view.set_status('WordCount', "%s Words%s%s%s" % (word_count, word_count_line, chars_count_line, read_time))
+	def makePlural(self, word, count):
+		return "%s %s%s" % (count, word, ("s" if count != 1 else ""))
 
 class WordCountThread(threading.Thread):
 
@@ -128,46 +119,44 @@ class WordCountThread(threading.Thread):
 		Pref.running         = True
 
 		self.word_count      = sum([self.count(region) for region in self.content])
+		self.char_count      = sum([len(region) for region in self.content])
 		self.word_count_line = self.count(self.content_line)
-
 		self.chars_in_line = len(self.content_line.strip());
 
 		sublime.set_timeout(lambda:self.on_done(), 0)
 
 	def on_done(self):
 		try:
-			WordCount().display(self.view, self.word_count, self.word_count_line, self.chars_in_line, self.on_selection)
+			WordCount().display(self.view, self.word_count, self.char_count, self.word_count_line, self.chars_in_line)
 		except:
 			pass
 		Pref.running = False
 
 	def count(self, content):
 
-		begin = time.time()
+		#begin = time.time()
 
 		#=====1
 		# wrdRx = Pref.wrdRx
 		# """counts by counting all the start-of-word characters"""
 		# # regex to find word characters
 		# matchingWrd = False
-		# words = 0;
+		# words = 0
+		# space_symbols = [' ', '\r', '\n']
 		# for ch in content:
-		# 	# test if this char is a word char
-		# 	isWrd = wrdRx(ch) != None
-		# 	#print ch
+		# # 	# test if this char is a word char
+		# 	isWrd = ch not in space_symbols
 		# 	if isWrd and not matchingWrd:
-		# 		# we're moving into a word from not-a-word
 		# 		words = words + 1
 		# 		matchingWrd = True
 		# 	if not isWrd:
-		# 		# go back to not matching words
 		# 		matchingWrd = False
 
 		#=====2
 		wrdRx = Pref.wrdRx
 		words = len([x for x in content.replace('\n', ' ').split(' ') if False == x.isdigit() and wrdRx(x)])
 
-		Pref.elapsed_time = end = time.time() - begin;
+		#Pref.elapsed_time = end = time.time() - begin;
 		#print 'Benchmark: '+str(end)
 
 		return words

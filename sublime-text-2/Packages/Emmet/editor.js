@@ -1,8 +1,8 @@
-var editorProxy = emmet.exec(function(require, _) {
-	function activeView() {
-		return sublime.active_window().active_view();
-	}
+function activeView() {
+	return sublime.active_window().active_view();
+}
 
+var editorProxy = emmet.exec(function(require, _) {
 	return {
 		getSelectionRange: function() {
 			var view = activeView();
@@ -65,24 +65,7 @@ var editorProxy = emmet.exec(function(require, _) {
 		},
 
 		getSyntax: function() {
-			var view = activeView();
-			var scope = view.syntax_name(view.sel()[0].begin());
-
-			if (~scope.indexOf('xsl')) {
-				return 'xsl';
-			}
-
-			// detect CSS-like syntaxes independently, 
-			// since it may cause collisions with some highlighters
-			if (/\b(less|scss|sass|css|stylus)\b/.test(scope)) {
-				return RegExp.$1;
-			}
-
-			if (/\b(html|xml|haml)\b/.test(scope)) {
-				return RegExp.$1;
-			}
-
-			return 'html';
+			return pyGetSyntax();
 		},
 
 		getProfileName: function() {
@@ -102,14 +85,14 @@ var editorProxy = emmet.exec(function(require, _) {
 				// * Python's multiline block
 				// * CoffeeScript string
 				// * PHP heredoc
-				return null;
+				return pyDetectProfile();
 			}
 
 			if (view.score_selector(pos, 'source string')) {
 				return 'line';
 			}
 
-			return null;
+			return pyDetectProfile();
 		},
 
 		prompt: function(title) {
@@ -126,6 +109,8 @@ var editorProxy = emmet.exec(function(require, _) {
 		}
 	};
 });
+
+var _completions = {};
 
 function require(name) {
 	return emmet.require(name);
@@ -207,15 +192,15 @@ function pyCaptureWrappingRange() {
 	
 	if (startOffset == endOffset) {
 		// no selection, find tag pair
-		var matcher = require('html_matcher');
-		range = matcher(info.content, startOffset, info.profile);
-		
-		if (!range || range[0] == -1) // nothing to wrap
+		var match = require('htmlMatcher').find(info.content, startOffset);
+		if (!match) {
+			// nothing to wrap
 			return null;
+		}
 		
 		/** @type Range */
 		var utils = require('utils');
-		var narrowedSel = utils.narrowToNonSpace(info.content, range[0], range[1] - range[0]);
+		var narrowedSel = utils.narrowToNonSpace(info.content, match.range);
 		startOffset = narrowedSel.start;
 		endOffset = narrowedSel.end;
 	}
@@ -229,14 +214,14 @@ function pyGetTagNameRanges() {
 		
 	// search for tag
 	try {
-		var pair = require('html_matcher').getTags(info.content, editorProxy.getCaretPos(), info.profile);
-		if (pair && pair[0]) {
-			var openingTag = info.content.substring(pair[0].start, pair[0].end);
-			var tagName = /^<([\w\-\:]+)/i.exec(openingTag)[1];
-			ranges.push([pair[0].start + 1, pair[0].start + 1 + tagName.length]);
+		var tag = require('htmlMatcher').tag(info.content, editorProxy.getCaretPos());
+		if (tag) {
+			var open = tag.open.range;
+			var tagName = /^<([\w\-\:]+)/i.exec(open.substring(info.content))[1];
+			ranges.push([open.start + 1, open.start + 1 + tagName.length]);
 
-			if (pair[1]) {
-				ranges.push([pair[1].start + 2, pair[1].start + 2 + tagName.length]);
+			if (tag.close) {
+				ranges.push([tag.close.range.start + 2, tag.close.range.start + 2 + tagName.length]);
 			}
 		}
 	} catch (e) {}
@@ -250,11 +235,11 @@ function pyGetTagRanges() {
 		
 	// search for tag
 	try {
-		var pair = require('html_matcher').getTags(info.content, editorProxy.getCaretPos(), info.profile);
-		if (pair && pair[0]) {
-			ranges.push([pair[0].start, pair[0].end]);
-			if (pair[1]) {
-				ranges.push([pair[1].start, pair[1].end]);
+		var tag = require('htmlMatcher').tag(info.content, editorProxy.getCaretPos());
+		if (tag) {
+			ranges.push(tag.open.range.toArray());
+			if (tag.close) {
+				ranges.push(tag.close.range.toArray());
 			}
 		}
 	} catch (e) {}
@@ -268,4 +253,60 @@ function pyExtractAbbreviation() {
 
 function pyHasSnippet(name) {
 	return !!emmet.require('resources').findSnippet(editorProxy.getSyntax(), name);
+}
+
+/**
+ * Get all available CSS completions. This method is optimized for CSS
+ * only since it should contain snippets only so it's not required
+ * to do extra parsing
+ */
+function pyGetCSSCompletions(dialect) {
+	dialect = dialect || pyGetSyntax();
+
+	if (!_completions[dialect]) {
+		var all = require('resources').getAllSnippets(dialect);
+		var css = require('cssResolver');
+		_completions[dialect] = _.map(all, function(v, k) {
+			var snippetValue = typeof v.parsedValue == 'object' 
+				? v.parsedValue.data
+				: v.value;
+			var snippet = css.transformSnippet(snippetValue, false, dialect);
+			return {
+				k: v.nk,
+				label: snippet.replace(/\:\s*\$\{0\}\s*;?$/, ''),
+				v: snippet
+			};
+		});
+	}
+
+	return _completions[dialect];
+}
+
+/**
+ * Returns current syntax name
+ * @return {String}
+ */
+function pyGetSyntax() {
+	var view = activeView();
+	var scope = view.syntax_name(view.sel()[0].begin());
+
+	if (~scope.indexOf('xsl')) {
+		return 'xsl';
+	}
+
+	var syntax = 'html';
+
+	// detect CSS-like syntaxes independently, 
+	// since it may cause collisions with some highlighters
+	if (/\b(less|scss|sass|css|stylus)\b/.test(scope)) {
+		syntax = RegExp.$1;
+	} else if (/\b(html|xml|haml)\b/.test(scope)) {
+		syntax = RegExp.$1;
+	}
+
+	return require('actionUtils').detectSyntax(editorProxy, syntax);
+}
+
+function pyDetectProfile(argument) {
+	return require('actionUtils').detectProfile(editorProxy);
 }
