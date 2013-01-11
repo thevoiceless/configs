@@ -116,7 +116,7 @@ alias sublime='sublime-text-2'
 PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
 source ~/.rvm/scripts/rvm
 
-# Connecting to MTP devices
+# Connect to MTP device
 alias mtp-connect="mtpfs -o allow_other /media/mtp"
 alias mtp-disconnect="fusermount -u /media/mtp"
 
@@ -128,14 +128,7 @@ alias targz="tar -zcvf"
 alias home="cd ~"
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
-alias linux="cd ~/Documents/school/csci274"
-alias princ="cd ~/Documents/school/csci400"
-alias alg="cd ~/Documents/school/csci406"
-alias ui="cd ~/Documents/school/csci422"
-alias gra="cd ~/Documents/school/csci441"
-alias android="cd ~/Documents/school/csci498A"
-alias railscode="cd ~/Documents/code/rails"
-alias votingapp="cd ~/Documents/code/rails/mobile-app"
+alias webapps="cd ~/Documents/school/csci446/"
 
 # Easy extract
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
