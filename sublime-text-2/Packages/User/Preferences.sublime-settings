@@ -7,8 +7,7 @@
 	"hot_exit": false,
 	"ignored_packages":
 	[
-		"Vintage",
-		"Emmet"
+		"Vintage"
 	],
 	"remember_open_files": false,
 	"shift_tab_unindent": true

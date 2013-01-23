@@ -129,6 +129,8 @@ alias home="cd ~"
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
+alias db="cd ~/Documents/school/csci403/"
+alias os="cd ~/Documents/school/csci442/"
 
 # Easy extract
 alias extract="atool -x" # Try ="dtrx" if this doesn't work

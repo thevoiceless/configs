@@ -2,12 +2,12 @@
 	"auto_upgrade_last_run": null,
 	"installed_packages":
 	[
-		"Bison",
+		"AAAPackageDev",
 		"BracketHighlighter",
 		"DetectSyntax",
-		"Emmet",
 		"Git",
 		"HexViewer",
+		"Markdown Preview",
 		"Package Control",
 		"SideBarGit",
 		"SublimeCodeIntel",
