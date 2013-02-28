@@ -114,7 +114,7 @@ alias sublime='sublime-text-2'
 
 # RVM stuff
 PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
-source ~/.rvm/scripts/rvm
+source $HOME/.rvm/scripts/rvm
 
 # Connect to MTP device
 alias mtp-connect="mtpfs -o allow_other /media/mtp"
@@ -131,6 +131,21 @@ alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
 alias db="cd ~/Documents/school/csci403/"
 alias os="cd ~/Documents/school/csci442/"
+
+# SSH to toilers.mines.edu in the background
+alias toilers-connect="ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu"
+# Kill the SSH connection to toilers.mines.edu
+toilers-disconnect()
+{
+    pid=`ps aux | grep -F 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
+    kill $pid 2>/dev/null
+    if [[ $? -ne 0 ]]
+    then
+        echo "Not connected to Toilers"
+    else
+        echo "Disconnected"
+    fi
+}
 
 # Easy extract
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
@@ -161,7 +176,3 @@ backupconfig()
     git push
     cd $origDir
 }
-
-# Up/Down arrows autocomplete what has already been typed
-bind '"\e[A": history-search-backward'
-bind '"\e[B": history-search-forward'

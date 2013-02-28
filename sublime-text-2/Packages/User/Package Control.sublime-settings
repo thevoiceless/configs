@@ -4,11 +4,13 @@
 	[
 		"AAAPackageDev",
 		"BracketHighlighter",
+		"CoffeeScript",
 		"DetectSyntax",
 		"Git",
 		"HexViewer",
 		"Markdown Preview",
 		"Package Control",
+		"Sass",
 		"SideBarGit",
 		"SublimeCodeIntel",
 		"SublimeREPL",
