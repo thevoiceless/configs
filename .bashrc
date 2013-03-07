@@ -175,7 +175,7 @@ backupconfig()
     git status
     echo "Commit message (no quotes):"
     read commitMsg
-    git commit -m "$commitMsg"
+    git commit -m "$commitMsg" | grep -v "mode"
     echo "Pushing..."
     git push
     cd $origDir
