@@ -162,20 +162,23 @@ backupconfig()
     done
     echo
     echo "The following will be backed up:"
-    ls -lAh1 --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }'
+    echo -en "\nSize\tDate\tTime\tName"
+    ls -lAh --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }' | sort -k5
     echo
     echo "Continue? (y/N)"
     read yn
     case $yn in
         [Yy]* );;
-        * ) exit 0;;
+        * ) return 1;;
     esac
+    echo
     git add .
     git add -A
     git status
-    echo "Commit message (no quotes):"
+    echo "Commit message (no quotation marks):"
     read commitMsg
     git commit -m "$commitMsg" | grep -v "mode"
+    echo
     echo "Pushing..."
     git push
     cd $origDir
