@@ -155,19 +155,23 @@ backupconfig()
 {
     backupDir="/home/riley/Computer/backup/config"
     origDir=`pwd`
-    for index in `cat /home/riley/Computer/backup/config/index`
+    cd $backupDir
+    for index in `cat index`
     do
-        rsync -rupEShi $index $backupDir
+        rsync -rupEShi --delete $index $backupDir
     done
     echo
     echo "The following will be backed up:"
     ls -lAh1 --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }'
     echo
-    echo "If any of the above are not up-to-date, exit now. Otherwise, press enter."
-    read hold
-    cd $backupDir
+    echo "Continue? (y/N)"
+    read yn
+    case $yn in
+        [Yy]* );;
+        * ) exit 0;;
+    esac
     git add .
-    git add -u
+    git add -A
     git status
     echo "Commit message (no quotes):"
     read commitMsg
