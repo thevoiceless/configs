@@ -200,9 +200,11 @@ backupconfig()
             ;;
     esac
 
-    echo "Commit message:"
+    echo
+    echo "Commit message (single line, no surrounding quotes):"
     read commitMsg
-    git commit -m "$commitMsg" | grep -v "mode"
+    echo
+    git commit -m "$commitMsg" | head -n 2
 
     echo
     echo "Pushing..."
