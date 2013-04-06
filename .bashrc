@@ -142,8 +142,22 @@ backupconfig()
     backupDir="/home/riley/Computer/backup/config"
     origDir=`pwd`
     cd $backupDir
-    # Shared files
-    for index in `cat index-shared`
+    # Pull latest changes
+    echo "Pulling latest changes..."
+    git pull
+    echo
+    echo "Continue? (y/N)"
+    read yn
+    case $yn in
+        [Yy]*)
+            ;;
+        *)
+            cd $origDir
+            return 1
+            ;;
+    esac
+    # Update shared files
+    for index in `cat index-common`
     do
         # Overwrite the ones in this directory
         # Delete any files in the target directory that don't exist in the source
@@ -172,7 +186,6 @@ backupconfig()
     echo
     echo "The following will be backed up:"
     tree -a --noreport --dirsfirst -L 2 -I .git $backupDir
-    # Confirm
     echo
     echo "Continue? (y/N)"
     read yn
@@ -189,7 +202,6 @@ backupconfig()
     git add .
     git add -A
     git status
-    # Confirm
     echo
     echo "Commit? (y/N)"
     read yn
@@ -212,10 +224,42 @@ backupconfig()
     echo "Pushing..."
     git push
     # Return to original directory
+    echo "Done."
+    cd $origDir
+}
+pullconfig()
+{
+    restoreDir="/home/riley/Computer/backup/config"
+    origDir=`pwd`
+    cd $restoreDir
+    # Pull latest changes
+    echo "Pulling latest changes..."
+    git pull
+    echo
+    echo "Apply changes? (y/N)"
+    read yn
+    case $yn in
+        [Yy]*)
+            ;;
+        *)
+            cd $origDir
+            return 1
+            ;;
+    esac
+    thisComputer=`hostname`
+    dashLoc=`hostname | xargs -I {} expr index {} '-'`
+    hostDir=${thisComputer:$dashLoc}
+    # Update shared files
+    for index in `cat index-common`
+    do
+        file=`echo $index | awk -F "/" '{ print $NF }'`
+        rsync -rupEShi $file ${index%/*}
+    done
+    echo "Done."
     cd $origDir
 }
 
-# Unload and reload wifi module
+# Unload and reload Realtek wifi module
 reload-wifi()
 {
     echo "Unloading module rtl8192se..."
