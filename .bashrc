@@ -147,6 +147,7 @@ backupconfig()
     do
         # Overwrite the ones in this directory
         # Delete any files in the target directory that don't exist in the source
+        # For example, remove files for any Sublime plugins that have been uninstalled
         rsync -rupEShi --delete $index $backupDir
     done
     # Check if there are any files specific to this host
@@ -167,11 +168,11 @@ backupconfig()
             rsync -rupEShi --delete $index $hostDir
         done
     fi
-
+    # List the contents of the directory
     echo
     echo "The following will be backed up:"
     tree -a --noreport --dirsfirst -L 2 -I .git $backupDir
-
+    # Confirm
     echo
     echo "Continue? (y/N)"
     read yn
@@ -183,11 +184,12 @@ backupconfig()
             return 1
             ;;
     esac
-
+    # Add/update files
     echo
     git add .
     git add -A
     git status
+    # Confirm
     echo
     echo "Commit? (y/N)"
     read yn
@@ -199,32 +201,18 @@ backupconfig()
             return 1
             ;;
     esac
-
+    # Commit
     echo
     echo "Commit message (single line, no surrounding quotes):"
     read commitMsg
     echo
     git commit -m "$commitMsg" | head -n 2
-
+    # Push
     echo
     echo "Pushing..."
     git push
-
+    # Return to original directory
     cd $origDir
-
-    # echo -en "\nSize\tDate\tTime\tName"
-    # ls -lAh --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }' | sort -k5
-    
-    # echo
-    # git add .
-    # git add -A
-    # git status
-    # echo "Commit message (no quotation marks):"
-    # read commitMsg
-    # git commit -m "$commitMsg" | grep -v "mode"
-    # echo
-    # echo "Pushing..."
-    # git push
 }
 
 # Unload and reload wifi module
