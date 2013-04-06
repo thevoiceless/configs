@@ -142,32 +142,87 @@ backupconfig()
     backupDir="/home/riley/Computer/backup/config"
     origDir=`pwd`
     cd $backupDir
-    for index in `cat index`
+    # Shared files
+    for index in `cat index-shared`
     do
+        # Overwrite the ones in this directory
+        # Delete any files in the target directory that don't exist in the source
         rsync -rupEShi --delete $index $backupDir
     done
+    # Check if there are any files specific to this host
+    thisComputer=`hostname`
+    dashLoc=`echo $thisComputer | xargs -I {} expr index {} '-'`
+    hostDir=${thisComputer:$dashLoc}
+    if [[ -f "index-${hostDir}" ]]
+    then
+        # Create a directory for this host if it doesn't exist
+        if [[ ! -d "$hostDir" ]]
+        then
+            echo "Creating directory '${hostDir}' for this host"
+            mkdir $hostDir
+        fi
+        # Copy the host-specific files to the new directory
+        for index in `cat index-${hostDir}`
+        do
+            rsync -rupEShi --delete $index $hostDir
+        done
+    fi
+
     echo
     echo "The following will be backed up:"
-    echo -en "\nSize\tDate\tTime\tName"
-    ls -lAh --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }' | sort -k5
+    tree -a --noreport --dirsfirst -L 2 -I .git $backupDir
+
     echo
     echo "Continue? (y/N)"
     read yn
     case $yn in
-        [Yy]* );;
-        * ) return 1;;
+        [Yy]*)
+            ;;
+        *)
+            cd $origDir
+            return 1
+            ;;
     esac
+
     echo
     git add .
     git add -A
     git status
-    echo "Commit message (no quotation marks):"
+    echo
+    echo "Commit? (y/N)"
+    read yn
+    case $yn in
+        [Yy]*)
+            ;;
+        *)
+            cd $origDir
+            return 1
+            ;;
+    esac
+
+    echo "Commit message:"
     read commitMsg
     git commit -m "$commitMsg" | grep -v "mode"
+
     echo
     echo "Pushing..."
     git push
+
     cd $origDir
+
+    # echo -en "\nSize\tDate\tTime\tName"
+    # ls -lAh --group-directories-first $backupDir | sed '/.git$/d' | awk '{ print $5 "\t" $6 " " $7 "\t" $8 "\t" $9 }' | sort -k5
+    
+    # echo
+    # git add .
+    # git add -A
+    # git status
+    # echo "Commit message (no quotation marks):"
+    # read commitMsg
+    # git commit -m "$commitMsg" | grep -v "mode"
+    # echo
+    # echo "Pushing..."
+    # git push
 }
 
 # Unload and reload wifi module
