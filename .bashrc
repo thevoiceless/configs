@@ -162,7 +162,7 @@ backupconfig()
         # Overwrite the ones in this directory
         # Delete any files in the target directory that don't exist in the source
         # For example, remove files for any Sublime plugins that have been uninstalled
-        rsync --filter='merge rsync_ignore' -rupEShi --delete $index $backupDir
+        rsync --exclude-from .gitignore -rupEShi --delete $index $backupDir
     done
     # Check if there are any files specific to this host
     thisComputer=`hostname`
@@ -203,7 +203,7 @@ backupconfig()
     git add -A
     git status
     echo
-    echo "Commit? (y/N)"
+    echo "Commit these changes? (y/N)"
     read yn
     case $yn in
         [Yy]*)
