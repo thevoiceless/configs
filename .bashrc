@@ -136,6 +136,16 @@ toilers-disconnect()
         echo "Disconnected"
     fi
 }
+# Connect to toilers.mines.edu, push, and disconnect
+toilers-push()
+{
+    toilers-connect
+    if [[ $? -eq 0 ]]
+    then
+        git push
+    fi
+    toilers-disconnect
+}
 # Update config files
 backupconfig()
 {
@@ -258,7 +268,6 @@ pullconfig()
     echo "Done."
     cd $origDir
 }
-
 # Unload and reload Realtek wifi module
 reload-wifi()
 {
