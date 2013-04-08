@@ -1,0 +1,9 @@
+[user]
+	name = Riley Moses
+	email = victi.resurgo@gmail.com
+[core]
+	editor = gedit
+[color]
+	ui = true
+[alias]
+	lg = log --pretty=format:'%C(cyan)%h%Creset %Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --reverse
