@@ -181,7 +181,7 @@ backupconfig()
         # Overwrite the ones in this directory
         # Delete any files in the target directory that don't exist in the source
         # For example, remove files for any Sublime plugins that have been uninstalled
-        rsync --exclude-from .gitignore -rupEShi --delete $index $backupDir
+        rsync --exclude-from .gitignore -rupEShi --delete --delete-excluded $index $backupDir
     done
     # Check if there are any files specific to this host
     thisComputer=`hostname`
