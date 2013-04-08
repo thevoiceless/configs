@@ -120,10 +120,19 @@ alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
 alias db="cd ~/Documents/school/csci403/"
 alias os="cd ~/Documents/school/csci442/"
-# SSH to toilers.mines.edu in the background
-alias toilers-connect="ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu"
 
 # Functions
+# SSH to toilers.mines.edu in the background
+toilers-connect()
+{
+    ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu
+    if [[ $? -ne 0 ]]
+    then
+        return 1
+    else
+        echo "Connected to Toilers"
+    fi
+}
 # Kill the SSH connection to toilers.mines.edu
 toilers-disconnect()
 {
@@ -133,7 +142,7 @@ toilers-disconnect()
     then
         echo "Not connected to Toilers"
     else
-        echo "Disconnected"
+        echo "Disconnected from Toilers"
     fi
 }
 # Connect to toilers.mines.edu, push, and disconnect
