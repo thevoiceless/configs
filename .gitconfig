@@ -6,4 +6,4 @@
 [color]
 	ui = true
 [alias]
-	lg = log --pretty=format:'%C(cyan)%h%Creset %Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --reverse
+	lg = log --pretty=format:'%C(cyan)%h%Creset %Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' -15 --reverse
