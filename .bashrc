@@ -115,6 +115,8 @@ alias targz="tar -zcvf"
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
 # Navigation
 alias home="cd ~"
+alias cd="echo HI, RILEY!"
+alias ls="cd"
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
@@ -162,8 +164,7 @@ backupconfig()
     origDir=`pwd`
     cd $backupDir
     # Pull latest changes
-    echo "Pulling latest changes..."
-    git pull
+    pullconfig
     echo
     echo "Continue? (y/N)"
     read yn

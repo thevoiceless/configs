@@ -3,5 +3,6 @@
 	{ "keys": ["ctrl+shift+tab"], "command": "insert", "args": {"characters": "\t"} },
 	{ "keys": ["ctrl+shift+s"], "command": "save_all" },
 	{ "keys": ["ctrl+k", "ctrl+j"], "command": "fold_all" },
-	{ "keys": ["ctrl+0"], "command": "reset_font_size" }
+	{ "keys": ["ctrl+0"], "command": "reset_font_size" },
+	{ "keys": ["ctrl+alt+f"], "command": "show_panel", "args": {"panel": "find_in_files"} }
 ]
