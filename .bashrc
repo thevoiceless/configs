@@ -115,8 +115,6 @@ alias targz="tar -zcvf"
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
 # Navigation
 alias home="cd ~"
-alias cd="echo HI, RILEY!"
-alias ls="cd"
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
@@ -273,7 +271,14 @@ pullconfig()
     for index in `cat index-common`
     do
         file=`echo $index | awk -F "/" '{ print $NF }'`
-        rsync -rupEShi $file ${index%/*}
+        # Delete files not present in the source ONLY if syncing a directory
+        # Not done for files because all other files in the target directory would be deleted
+        if [[ -d $file ]]
+        then
+            rsync -rupEShi --delete $file ${index%/*}
+        else
+            rsync -rupEShi $file ${index%/*}
+        fi
     done
     echo "Done."
     cd $origDir
