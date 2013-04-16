@@ -114,7 +114,6 @@ alias targz="tar -zcvf"
 # Easy extract
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
 # Navigation
-alias home="cd ~"
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
 alias webapps="cd ~/Documents/school/csci446/"
@@ -158,13 +157,13 @@ toilers-push()
 # Update config files
 backupconfig()
 {
-    backupDir="/home/riley/Computer/backup/config"
-    origDir=`pwd`
-    cd $backupDir
     # Pull latest changes
     pullconfig
     echo
-    echo "Continue? (y/N)"
+    backupDir="/home/riley/Computer/backup/config"
+    origDir=`pwd`
+    cd $backupDir
+    echo "Continue with backup? (y/N)"
     read yn
     case $yn in
         [Yy]*)
@@ -292,4 +291,15 @@ reload-wifi()
     echo "Reloading module rtl8192se..."
     sudo modprobe rtl8192se
     echo "Done"
+}
+# Turn screen off (does not lock)
+screen-off()
+{
+    xset dpms force off
+}
+# Lock and turn off screen
+lock()
+{
+    gnome-screensaver-command -l
+    screen-off
 }
