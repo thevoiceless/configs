@@ -121,6 +121,29 @@ alias db="cd ~/Documents/school/csci403/"
 alias os="cd ~/Documents/school/csci442/"
 
 # Functions
+# Create SSH tunnel for Mines VPN
+mines-vpn-connect()
+{
+    ssh -f -N -D 5678 rimoses@imagine.mines.edu
+    if [[ $? -ne 0 ]]
+    then
+        return 1
+    else
+        echo "Route traffic through port 5678"
+    fi
+}
+# Stop SSH tunnel
+mines-vpn-disconnect()
+{
+    pid=`ps aux | grep 'ssh -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
+    kill -9 $pid 2>/dev/null
+    if [[ $? -ne 0 ]]
+    then
+        echo "Not tunneling to VPN"
+    else
+        echo "Tunnel closed"
+    fi
+}
 # SSH to toilers.mines.edu in the background
 toilers-connect()
 {
@@ -135,7 +158,7 @@ toilers-connect()
 # Kill the SSH connection to toilers.mines.edu
 toilers-disconnect()
 {
-    pid=`ps aux | grep -F 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
+    pid=`ps aux | grep 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
     kill $pid 2>/dev/null
     if [[ $? -ne 0 ]]
     then
@@ -274,7 +297,8 @@ pullconfig()
         # Not done for files because all other files in the target directory would be deleted
         if [[ -d $file ]]
         then
-            rsync -rupEShi --delete $file ${index%/*}
+            # TODO: Figure out how to keep License.sublime_license from being deleted
+            rsync --exclude "License.sublime_license" -rupEShi --delete $file ${index%/*}
         else
             rsync -rupEShi $file ${index%/*}
         fi
