@@ -113,6 +113,8 @@ alias untargz="tar -zxvf"
 alias targz="tar -zcvf"
 # Easy extract
 alias extract="atool -x" # Try ="dtrx" if this doesn't work
+# Start irb with Ruby script
+alias irb-load="irb -I./ -r"
 # Navigation
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
@@ -135,7 +137,7 @@ mines-vpn-connect()
 # Stop SSH tunnel
 mines-vpn-disconnect()
 {
-    pid=`ps aux | grep 'ssh -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
+    pid=`ps aux | grep 'ssh -f -N -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
     kill -9 $pid 2>/dev/null
     if [[ $? -ne 0 ]]
     then
@@ -327,3 +329,5 @@ lock()
     gnome-screensaver-command -l
     screen-off
 }
+### Added by the Heroku Toolbelt
+export PATH="/usr/local/heroku/bin:$PATH"
