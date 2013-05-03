@@ -92,29 +92,25 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-# PATH
+# PATH modifications
 # Android tools
-export PATH=${PATH}:~/Computer/android-sdk-linux/tools:~/Computer/android-sdk-linux/platform-tools
+export PATH=${PATH}:${HOME}/Computer/android-sdk-linux/tools:${HOME}/Computer/android-sdk-linux/platform-tools
 # RVM
 export PATH=${PATH}:${HOME}/.rvm/bin
+# Heroku toolbelt
+export PATH=${PATH}:/usr/local/heroku/bin
 
 # Load RVM
 source $HOME/.rvm/scripts/rvm
 
 # Aliases
-# Show an alert for long running commands.  Use like so:
-#   sleep 10; alert
+# Show an alert for long running commands.  Use like so: "sleep 10; alert"
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-# Connect to MTP device
-alias mtp-connect="mtpfs -o allow_other /media/mtp"
-alias mtp-disconnect="fusermount -u /media/mtp"
-# tar.gz
-alias untargz="tar -zxvf"
-alias targz="tar -zcvf"
 # Easy extract
-alias extract="atool -x" # Try ="dtrx" if this doesn't work
-# Start irb with Ruby script
-alias irb-load="irb -I./ -r"
+# Try dtrx if atool doesn't work
+alias extract="atool -x"
+# Run a Ruby script and drop into irb when finished rather than terminating
+alias rirb="irb -I./ -r"
 # Navigation
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
@@ -123,63 +119,22 @@ alias db="cd ~/Documents/school/csci403/"
 alias os="cd ~/Documents/school/csci442/"
 
 # Functions
-# Create SSH tunnel for Mines VPN
-mines-vpn-connect()
+
+# Confirm, yes or no
+confirm-yn()
 {
-    ssh -f -N -D 5678 rimoses@imagine.mines.edu
-    if [[ $? -ne 0 ]]
-    then
-        return 1
-    else
-        echo "Route traffic through port 5678"
-    fi
+    read yn
+    case $yn in
+        [Yy]*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
 }
-# Stop SSH tunnel
-mines-vpn-disconnect()
-{
-    pid=`ps aux | grep 'ssh -f -N -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
-    kill -9 $pid 2>/dev/null
-    if [[ $? -ne 0 ]]
-    then
-        echo "Not tunneling to VPN"
-    else
-        echo "Tunnel closed"
-    fi
-}
-# SSH to toilers.mines.edu in the background
-toilers-connect()
-{
-    ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu
-    if [[ $? -ne 0 ]]
-    then
-        return 1
-    else
-        echo "Connected to Toilers"
-    fi
-}
-# Kill the SSH connection to toilers.mines.edu
-toilers-disconnect()
-{
-    pid=`ps aux | grep 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
-    kill $pid 2>/dev/null
-    if [[ $? -ne 0 ]]
-    then
-        echo "Not connected to Toilers"
-    else
-        echo "Disconnected from Toilers"
-    fi
-}
-# Connect to toilers.mines.edu, push, and disconnect
-toilers-push()
-{
-    toilers-connect
-    if [[ $? -eq 0 ]]
-    then
-        git push
-    fi
-    toilers-disconnect
-}
-# Update config files
+
+# Push current config files to repo
 backupconfig()
 {
     # Pull latest changes
@@ -191,15 +146,12 @@ backupconfig()
     origDir=`pwd`
     cd $backupDir
     echo "Continue with backup? (y/N)"
-    read yn
-    case $yn in
-        [Yy]*)
-            ;;
-        *)
-            cd $origDir
-            return 1
-            ;;
-    esac
+    confirm-yn
+    if [[ $? -ne 0 ]]
+    then
+        cd $origDir
+        return 0
+    fi
 
     # Update shared files
     # This weird loop is used so that bash iterates over each line rather than each chunk separated by whitespace
@@ -209,12 +161,14 @@ backupconfig()
         # Delete any files in the target directory that don't exist in the source
         # For example, remove files for any Sublime plugins that have been uninstalled
         rsync --exclude-from .gitignore -rupEShi --delete --delete-excluded "${index}" $backupDir
-    done < index-common
+    done < "index-common"
 
-    # Check if there are any files specific to this host
+    # Determine which computer this is
     thisComputer=`hostname`
     dashCharLoc=`echo $thisComputer | xargs -I {} expr index {} '-'`
     hostDir=${thisComputer:$dashCharLoc}
+
+    # Update any files specific to this host
     if [[ -f "index-${hostDir}" ]]
     then
         # Create a directory for this host if it doesn't exist
@@ -224,10 +178,10 @@ backupconfig()
             mkdir $hostDir
         fi
         # Copy the host-specific files to the new directory
-        for index in `cat index-${hostDir}`
+        while read index
         do
-            rsync -rupEShi --delete $index $hostDir
-        done
+            rsync -rupEShi --delete "$index" $hostDir
+        done < "index-${hostDir}"
     fi
 
     # List the contents of the directory
@@ -238,15 +192,12 @@ backupconfig()
 
     # Continue?
     echo "Continue? (y/N)"
-    read yn
-    case $yn in
-        [Yy]*)
-            ;;
-        *)
-            cd $origDir
-            return 1
-            ;;
-    esac
+    confirm-yn
+    if [[ $? -ne 0 ]]
+    then
+        cd $origDir
+        return 0
+    fi
 
     # Add/update files
     echo
@@ -255,15 +206,12 @@ backupconfig()
     git status
     echo
     echo "Commit these changes? (y/N)"
-    read yn
-    case $yn in
-        [Yy]*)
-            ;;
-        *)
-            cd $origDir
-            return 1
-            ;;
-    esac
+    confirm-yn
+    if [[ $? -ne 0 ]]
+    then
+        cd $origDir
+        return 0
+    fi
 
     # Commit
     echo
@@ -281,6 +229,9 @@ backupconfig()
     echo "Done."
     cd $origDir
 }
+
+# Pull latest config files from repo
+# Ask before overwriting files currently on the system
 pullconfig()
 {
     restoreDir="/home/riley/Computer/backup/config"
@@ -291,36 +242,46 @@ pullconfig()
     echo "Pulling latest changes..."
     git pull
     echo
+
+    # Continue? This is so that changes can be pulled but not applied
     echo "Apply changes? (y/N)"
-    read yn
-    case $yn in
-        [Yy]*)
-            ;;
-        *)
-            cd $origDir
-            return 1
-            ;;
-    esac
+    confirm-yn
+    if [[ $? -ne 0 ]]
+    then
+        cd $origDir
+        return 0
+    fi
+
+    # Determine which computer this is
     thisComputer=`hostname`
     dashCharLoc=`hostname | xargs -I {} expr index {} '-'`
     hostDir=${thisComputer:$dashCharLoc}
 
     # Update shared files
-    for index in `cat index-common`
+    while read index
     do
-        file=`echo $index | awk -F "/" '{ print $NF }'`
-        # Delete files not present in the source ONLY if syncing a directory
-        # Not done for files because all other files in the target directory would be deleted
-        if [[ -d $file ]]
+        # Get just the name of the file/directory
+        name=`echo "$index" | awk -F "/" '{ print $NF }'`
+        # Check if it is a directory
+        # If so, delete files not present in the source
+        if [[ -d "$name" ]]
         then
-            rsync --exclude "License.sublime_license" -rupEShi --delete $file ${index%/*}
+            rsync -rupEShi --delete "${name}" ${index%/*}
+        # This is not done for files because all other files in the target directory would be deleted
         else
-            rsync -rupEShi $file ${index%/*}
+            rsync -rupEShi "${name}" ${index%/*}
         fi
-    done
+    done < "index-common"
+
+    # Files specific to this machine (such as system files) should be updated manually
+    echo
+    echo "NOTE:"
+    echo "Any files specific to ${thisComputer} must be manually updated!"
+
     echo "Done."
     cd $origDir
 }
+
 # Unload and reload Realtek wifi module
 reload-wifi()
 {
@@ -331,16 +292,77 @@ reload-wifi()
     sudo modprobe rtl8192se
     echo "Done"
 }
-# Turn screen off (does not lock)
+
+# Turn screen off (no lock)
 screen-off()
 {
     xset dpms force off
 }
+
 # Lock and turn off screen
 lock()
 {
     gnome-screensaver-command -l
     screen-off
 }
-### Added by the Heroku Toolbelt
-export PATH="/usr/local/heroku/bin:$PATH"
+
+# Create SSH tunnel for Mines VPN
+mines-vpn-connect()
+{
+    ssh -f -N -D 5678 rimoses@imagine.mines.edu
+    if [[ $? -ne 0 ]]
+    then
+        return 1
+    else
+        echo "Route traffic through port 5678"
+    fi
+}
+
+# Stop SSH tunnel
+mines-vpn-disconnect()
+{
+    pid=`ps aux | grep 'ssh -f -N -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
+    kill -9 $pid 2>/dev/null
+    if [[ $? -ne 0 ]]
+    then
+        echo "Not tunneling to VPN"
+    else
+        echo "Tunnel closed"
+    fi
+}
+
+# SSH to toilers.mines.edu in the background
+toilers-connect()
+{
+    ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu
+    if [[ $? -ne 0 ]]
+    then
+        return 1
+    else
+        echo "Connected to Toilers"
+    fi
+}
+
+# Kill the SSH connection to toilers.mines.edu
+toilers-disconnect()
+{
+    pid=`ps aux | grep 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
+    kill $pid 2>/dev/null
+    if [[ $? -ne 0 ]]
+    then
+        echo "Not connected to Toilers"
+    else
+        echo "Disconnected from Toilers"
+    fi
+}
+
+# Connect to toilers.mines.edu, push, and disconnect
+toilers-push()
+{
+    toilers-connect
+    if [[ $? -eq 0 ]]
+    then
+        git push
+    fi
+    toilers-disconnect
+}
