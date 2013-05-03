@@ -185,6 +185,8 @@ backupconfig()
     # Pull latest changes
     pullconfig
     echo
+
+    # Continue?
     backupDir="/home/riley/Computer/backup/config"
     origDir=`pwd`
     cd $backupDir
@@ -198,18 +200,21 @@ backupconfig()
             return 1
             ;;
     esac
+
     # Update shared files
-    for index in `cat index-common`
+    # This weird loop is used so that bash iterates over each line rather than each chunk separated by whitespace
+    while read index
     do
         # Overwrite the ones in this directory
         # Delete any files in the target directory that don't exist in the source
         # For example, remove files for any Sublime plugins that have been uninstalled
-        rsync --exclude-from .gitignore -rupEShi --delete --delete-excluded $index $backupDir
-    done
+        rsync --exclude-from .gitignore -rupEShi --delete --delete-excluded "${index}" $backupDir
+    done < index-common
+
     # Check if there are any files specific to this host
     thisComputer=`hostname`
-    dashLoc=`echo $thisComputer | xargs -I {} expr index {} '-'`
-    hostDir=${thisComputer:$dashLoc}
+    dashCharLoc=`echo $thisComputer | xargs -I {} expr index {} '-'`
+    hostDir=${thisComputer:$dashCharLoc}
     if [[ -f "index-${hostDir}" ]]
     then
         # Create a directory for this host if it doesn't exist
@@ -224,11 +229,14 @@ backupconfig()
             rsync -rupEShi --delete $index $hostDir
         done
     fi
+
     # List the contents of the directory
     echo
     echo "The following will be backed up:"
     tree -a --noreport --dirsfirst -L 2 -I .git $backupDir
     echo
+
+    # Continue?
     echo "Continue? (y/N)"
     read yn
     case $yn in
@@ -239,6 +247,7 @@ backupconfig()
             return 1
             ;;
     esac
+
     # Add/update files
     echo
     git add .
@@ -255,16 +264,19 @@ backupconfig()
             return 1
             ;;
     esac
+
     # Commit
     echo
     echo "Commit message (single line, no surrounding quotes):"
     read commitMsg
     echo
     git commit -m "$commitMsg" | head -n 2
+
     # Push
     echo
     echo "Pushing..."
     git push
+
     # Return to original directory
     echo "Done."
     cd $origDir
@@ -274,6 +286,7 @@ pullconfig()
     restoreDir="/home/riley/Computer/backup/config"
     origDir=`pwd`
     cd $restoreDir
+
     # Pull latest changes
     echo "Pulling latest changes..."
     git pull
@@ -289,8 +302,9 @@ pullconfig()
             ;;
     esac
     thisComputer=`hostname`
-    dashLoc=`hostname | xargs -I {} expr index {} '-'`
-    hostDir=${thisComputer:$dashLoc}
+    dashCharLoc=`hostname | xargs -I {} expr index {} '-'`
+    hostDir=${thisComputer:$dashCharLoc}
+
     # Update shared files
     for index in `cat index-common`
     do
@@ -299,7 +313,6 @@ pullconfig()
         # Not done for files because all other files in the target directory would be deleted
         if [[ -d $file ]]
         then
-            # TODO: Figure out how to keep License.sublime_license from being deleted
             rsync --exclude "License.sublime_license" -rupEShi --delete $file ${index%/*}
         else
             rsync -rupEShi $file ${index%/*}
