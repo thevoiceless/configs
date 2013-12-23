@@ -240,7 +240,7 @@ backupconfig()
     # Push
     echo
     echo "Pushing..."
-    git push
+    git push; alert
 
     # Return to original directory
     echo "Done."
