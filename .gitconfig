@@ -9,3 +9,6 @@
 	lg = log --pretty=format:'%C(cyan)%h%Creset %Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' -15 --reverse
 	delete-branch = branch -D
 	rename-branch = branch -m
+	update = add -u
+[diff]
+	algorithm = patience

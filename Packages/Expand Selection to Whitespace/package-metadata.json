@@ -1,1 +1,1 @@
-{"url": "https://github.com/bits/ExpandSelectionToWhitespace-SublimeText", "version": "1.0.1", "description": "Expand selection to the closest space, tab, newline, or Unicode spacing character surrounding the cursor(s) or selection(s)"}
+{"url": "https://github.com/bits/ExpandSelectionToWhitespace-SublimeText", "version": "3.0.3", "description": "Expand the selection to the whitespace that surrounds the cursor(s) or selection(s) in Sublime Text"}

@@ -108,17 +108,33 @@ source $HOME/.rvm/scripts/rvm
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 # Easy extract
 # Try dtrx if atool doesn't work
-alias extract="atool -x"
+alias extract="atool -x -D"
 # Run a Ruby script and drop into irb when finished rather than terminating
 alias rirb="irb -I./ -r"
 # Navigation
 alias docs="cd ~/Documents"
 alias school="cd ~/Documents/school"
-alias webapps="cd ~/Documents/school/csci446/"
-alias db="cd ~/Documents/school/csci403/"
-alias os="cd ~/Documents/school/csci442/"
 
 # Functions
+
+# List Brother devices
+brother-list()
+{
+    brsaneconfig3 -q
+}
+
+# Add Brother device
+brother-add()
+{
+    brsaneconfig3 -r $1
+    brsaneconfig3 -a name="$1" model=$1 ip=$2
+}
+
+# Remove Brother device
+brother-remove()
+{
+    brsaneconfig3 -r $1
+}
 
 # Confirm, yes or no
 confirm-yn()
@@ -154,11 +170,11 @@ backupconfig()
     fi
 
     # Update shared files
-    # This weird loop is used so that bash iterates over each line rather than each chunk separated by whitespace
+    # Iterate over each line in the file rather than each chunk separated by whitespace
     while read index
     do
-        # Overwrite the ones in this directory
-        # Delete any files in the target directory that don't exist in the source
+        # Overwrite the files in this directory
+        # Delete any files in the target (this) directory that don't exist in the source
         # For example, remove files for any Sublime plugins that have been uninstalled
         rsync --exclude-from .gitignore -rupEShi --delete --delete-excluded "${index}" $backupDir
     done < "index-common"
@@ -168,9 +184,11 @@ backupconfig()
     dashCharLoc=`echo $thisComputer | xargs -I {} expr index {} '-'`
     hostDir=${thisComputer:$dashCharLoc}
 
-    # Update any files specific to this host
+    # Add any files specific to this host
     if [[ -f "index-${hostDir}" ]]
     then
+        echo "specific files:"
+        cat "index-${hostDir}"
         # Create a directory for this host if it doesn't exist
         if [[ ! -d "$hostDir" ]]
         then
@@ -180,6 +198,7 @@ backupconfig()
         # Copy the host-specific files to the new directory
         while read index
         do
+            echo $index
             rsync -rupEShi --delete "$index" $hostDir
         done < "index-${hostDir}"
     fi
@@ -240,7 +259,12 @@ pullconfig()
 
     # Pull latest changes
     echo "Pulling latest changes..."
-    git pull
+    changes=$(git pull | tee /dev/tty)
+    if [[ "$changes" == "Already up-to-date." ]]
+    then
+        cd $origDir
+        return 0
+    fi
     echo
 
     # Continue? This is so that changes can be pulled but not applied
@@ -276,7 +300,8 @@ pullconfig()
     # Files specific to this machine (such as system files) should be updated manually
     echo
     echo "NOTE:"
-    echo "Any files specific to ${thisComputer} must be manually updated!"
+    echo -en "Files specific to this machine must be manually updated"
+    echo " (see file index-${thisComputer} and ${thisComputer} directory)"
 
     echo "Done."
     cd $origDir
@@ -304,65 +329,4 @@ lock()
 {
     gnome-screensaver-command -l
     screen-off
-}
-
-# Create SSH tunnel for Mines VPN
-mines-vpn-connect()
-{
-    ssh -f -N -D 5678 rimoses@imagine.mines.edu
-    if [[ $? -ne 0 ]]
-    then
-        return 1
-    else
-        echo "Route traffic through port 5678"
-    fi
-}
-
-# Stop SSH tunnel
-mines-vpn-disconnect()
-{
-    pid=`ps aux | grep 'ssh -f -N -D 5678' | grep -v 'grep' | awk '{ print $2 }'`
-    kill -9 $pid 2>/dev/null
-    if [[ $? -ne 0 ]]
-    then
-        echo "Not tunneling to VPN"
-    else
-        echo "Tunnel closed"
-    fi
-}
-
-# SSH to toilers.mines.edu in the background
-toilers-connect()
-{
-    ssh -f -N -L 7777:toilers.mines.edu:22 rimoses@imagine.mines.edu
-    if [[ $? -ne 0 ]]
-    then
-        return 1
-    else
-        echo "Connected to Toilers"
-    fi
-}
-
-# Kill the SSH connection to toilers.mines.edu
-toilers-disconnect()
-{
-    pid=`ps aux | grep 'ssh -f -N -L 7777:toilers' | grep -v -F 'grep' | awk '{ print $2 }'`
-    kill $pid 2>/dev/null
-    if [[ $? -ne 0 ]]
-    then
-        echo "Not connected to Toilers"
-    else
-        echo "Disconnected from Toilers"
-    fi
-}
-
-# Connect to toilers.mines.edu, push, and disconnect
-toilers-push()
-{
-    toilers-connect
-    if [[ $? -eq 0 ]]
-    then
-        git push
-    fi
-    toilers-disconnect
 }
