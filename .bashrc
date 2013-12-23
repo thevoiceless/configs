@@ -171,6 +171,7 @@ backupconfig()
 
     # Update shared files
     # Iterate over each line in the file rather than each chunk separated by whitespace
+    # NOTE: Index file must end with blank line!
     while read index
     do
         # Overwrite the files in this directory
@@ -187,8 +188,6 @@ backupconfig()
     # Add any files specific to this host
     if [[ -f "index-${hostDir}" ]]
     then
-        echo "specific files:"
-        cat "index-${hostDir}"
         # Create a directory for this host if it doesn't exist
         if [[ ! -d "$hostDir" ]]
         then
@@ -198,7 +197,6 @@ backupconfig()
         # Copy the host-specific files to the new directory
         while read index
         do
-            echo $index
             rsync -rupEShi --delete "$index" $hostDir
         done < "index-${hostDir}"
     fi

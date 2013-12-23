@@ -1,2 +1,3 @@
 /etc/X11/xorg.conf
 /home/riley/Computer/scripts/mount_windows.sh
+/home/riley/Computer/scripts/run_after_compiz.sh
